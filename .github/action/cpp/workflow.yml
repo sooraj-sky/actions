@@ -1,0 +1,114 @@
+name: C++ CI/CD Pipeline
+
+on:
+  # push:
+  #   branches: "*"
+
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options: [info, warning, debug]
+      print_tags:
+        description: 'True to print to STDOUT'
+        required: true
+        type: boolean
+
+jobs: 
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ClangFormat
+        run: sudo apt-get install clang-format
+      - name: Verify .clang-format exists
+        run: clang-format --version
+      - name: Check formatting
+        continue-on-error: true
+        run: clang-format --dry-run --Werror src/*.h src/*.cpp
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ClangTidy
+        run: sudo apt-get install clang-tidy
+      - name: Verify .clang-tidy exists
+        run: clang-tidy --version
+      - name: Check formatting
+        continue-on-error: true
+        run: clang-tidy src/*.h src/*.cpp
+
+  cpp-lint:
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v4
+      - name: Install cpplint
+        run: sudo apt-get install cpplint
+      - name: Verify .cpplint.py exists
+        run: cpplint --version
+      - name: Check formatting
+        continue-on-error: true
+        run: cpplint src/*.h src/*.cpp
+  
+  cpp-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get install cppcheck
+      - name: Verify .cppcheck exists
+        run: cppcheck --version
+      - name: Check formatting
+        run: cppcheck  --enable=all src/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install conan
+          conan profile detect --force
+          conan install . --build=missing -s build_type=Release
+
+      - name: Configure CMake
+        run: cmake --preset conan-release
+
+      - name: Build Application and Tests
+        run: cmake --build --preset conan-release
+
+      - name: Run unit tests
+        run: ctest --preset conan-release --output-on-failure
+  
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup-python
+        uses: actions/setup-python@v4
+      - name: Install dependencies
+        run: |
+          pip install conan
+          conan profile detect --force
+          conan install . --build=missing -s build_type=Release
+      - name: Install build dependencies
+        run: sudo apt-get install build-essential
+      - name: Configure CMake
+        run: cmake --preset conan-release
+      - name: Build
+        run: cmake --build --preset conan-release
+      - name: save artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: learn-cpp
+          path: build/**
+

@@ -1,0 +1,22 @@
+name: 'My Custom Action'
+description: 'Does something useful'
+
+inputs:
+  my-input:
+    description: 'An input value'
+    required: true
+    default: 'hello'
+
+outputs:
+  my-output:
+    description: 'The result'
+    value: ${{ steps.my-step.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run something
+      id: my-step
+      shell: bash
+      run: echo "result=done" >> $GITHUB_OUTPUT
+
